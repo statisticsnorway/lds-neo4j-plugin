@@ -261,6 +261,9 @@ public class PathExplorer {
 
         // if `sequence` is present, it overrides `labelFilter` and `relationshipFilter`
         if (sequence != null && !sequence.trim().isEmpty()) {
+            if (true) {
+                throw new UnsupportedOperationException("'sequence' not yet supported"); // TODO test and fix sequence implementation
+            }
             String[] sequenceSteps = sequence.split(",");
             List<String> labelSequenceList = new ArrayList<>();
             List<String> relSequenceList = new ArrayList<>();
