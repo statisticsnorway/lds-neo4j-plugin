@@ -32,8 +32,8 @@ public class ExpandPathTest {
     @BeforeClass
     public static void setUp() throws Exception {
         TestUtil.registerProcedure(db, PathExplorer.class);
-        String movies = Util.readResourceFile("movies.cypher");
-        String bigbrother = "MATCH (per:Person) MERGE (bb:BigBrother {name : 'Big Brother' })  MERGE (bb)-[:FOLLOWS]->(per)";
+        String movies = Util.readResourceFile("movies-tbv.cypher");
+        String bigbrother = "MATCH (per:Person)-[:VERSION_OF]->(per_R) MERGE (bb:BigBrother:INSTANCE {name : 'Big Brother' }) MERGE (bb_R:BigBrother_R:RESOURCE {id : 'bb'}) MERGE (bb)-[:VERSION_OF {from: datetime('2020-01-01T00:00:00.000+01:00[Europe/Oslo]')}]->(bb_R) MERGE (bb)-[:FOLLOWS]->(per_R)";
         try (Transaction tx = db.beginTx()) {
             tx.execute(movies);
             tx.execute(bigbrother);
@@ -49,35 +49,35 @@ public class ExpandPathTest {
     @Test
     public void testExplorePathAnyRelTypeTest() throws Throwable {
         TestUtil.testCall(db,
-                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'>','',0,2) yield path return count(*) as c",
+                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'>','',0,2,datetime()) yield path return count(*) as c",
                 (row) -> assertEquals(1L, row.get("c")));
 
         TestUtil.testCall(db,
-                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'<','',0,2) yield path return count(*) as c",
+                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'<','',0,2,datetime()) yield path return count(*) as c",
                 (row) -> assertEquals(17L, row.get("c")));
         TestUtil.testCall(db,
-                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'','',0,2) yield path return count(*) as c",
+                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'','',0,2,datetime()) yield path return count(*) as c",
                 (row) -> assertEquals(52L, row.get("c")));
         TestUtil.testCall(db,
-                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,null,'',0,2) yield path return count(*) as c",
+                "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,null,'',0,2,datetime()) yield path return count(*) as c",
                 (row) -> assertEquals(52L, row.get("c")));
     }
 
     @Test
     public void testExplorePathRelationshipsTest() throws Throwable {
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'<ACTED_IN|PRODUCED>|FOLLOWS','',0,2) yield path return count(*) as c";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'<ACTED_IN|PRODUCED>|FOLLOWS','',0,2,datetime()) yield path return count(*) as c";
         TestUtil.testCall(db, query, (row) -> assertEquals(11L, row.get("c")));
     }
 
     @Test
     public void testExplorePathLabelWhiteListTest() throws Throwable {
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'ACTED_IN|PRODUCED|FOLLOWS','+Person|+Movie',0,3) yield path return count(*) as c";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,'ACTED_IN|PRODUCED|FOLLOWS','+Person|+Movie',0,3,datetime()) yield path return count(*) as c";
         TestUtil.testCall(db, query, (row) -> assertEquals(107L, row.get("c"))); // 59 with Uniqueness.RELATIONSHIP_GLOBAL
     }
 
     @Test
     public void testExplorePathLabelBlackListTest() throws Throwable {
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,null,'-BigBrother',0,2) yield path return count(*) as c";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expand(m,null,'-BigBrother',0,2,datetime()) yield path return count(*) as c";
         TestUtil.testCall(db, query, (row) -> assertEquals(44L, row.get("c")));
     }
 
@@ -87,7 +87,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western', uniqueness: 'NODE_GLOBAL'}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western', uniqueness: 'NODE_GLOBAL'}, datetime()) yield path " +
                         "return path",
                 result -> {
 
@@ -100,7 +100,7 @@ public class ExpandPathTest {
 
     @Test
     public void testExplorePathWithFilterStartNodeFalseIgnoresLabelFilter() throws Throwable {
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Person', maxLevel:2, filterStartNode:false}) yield path return count(*) as c";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Person', maxLevel:2, filterStartNode:false}, datetime()) yield path return count(*) as c";
         TestUtil.testCall(db, query, (row) -> assertEquals(9L, row.get("c")));
     }
 
@@ -110,7 +110,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western', uniqueness: 'NODE_GLOBAL', limit: 2}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western', uniqueness: 'NODE_GLOBAL', limit: 2}, datetime()) yield path " +
                         "RETURN nodes(path)[-1].name AS node",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -134,7 +134,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western', uniqueness: 'NODE_GLOBAL'}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western', uniqueness: 'NODE_GLOBAL'}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -152,7 +152,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western', uniqueness: 'NODE_GLOBAL', limit:2}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western', uniqueness: 'NODE_GLOBAL', limit:2}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -173,7 +173,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'+Person|-Person', uniqueness: 'NODE_GLOBAL', filterStartNode:true}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'+Person|-Person', uniqueness: 'NODE_GLOBAL', filterStartNode:true}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -187,7 +187,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western|-Western', uniqueness: 'NODE_GLOBAL', filterStartNode:false}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western|-Western', uniqueness: 'NODE_GLOBAL', filterStartNode:false}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -201,7 +201,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western|-Western', uniqueness: 'NODE_GLOBAL', filterStartNode:false}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western|-Western', uniqueness: 'NODE_GLOBAL', filterStartNode:false}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -215,7 +215,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western|+Movie', uniqueness: 'NODE_GLOBAL', filterStartNode:false}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western|+Movie', uniqueness: 'NODE_GLOBAL', filterStartNode:false}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -231,7 +231,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western|>Western', uniqueness: 'NODE_GLOBAL', filterStartNode:false}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western|>Western', uniqueness: 'NODE_GLOBAL', filterStartNode:false}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -247,7 +247,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western|+Movie', uniqueness: 'NODE_GLOBAL', filterStartNode:false}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western|+Movie', uniqueness: 'NODE_GLOBAL', filterStartNode:false}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -265,7 +265,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western', uniqueness: 'NODE_GLOBAL', limit:1, minLevel:3}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western', uniqueness: 'NODE_GLOBAL', limit:1, minLevel:3}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -281,7 +281,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western', uniqueness: 'NODE_GLOBAL', minLevel:3}) yield path " +
+                        "CALL apoc.path.expandConfig(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western', uniqueness: 'NODE_GLOBAL', minLevel:3}, datetime()) yield path " +
                         "return path",
                 result -> {
                     List<Map<String, Object>> maps = Iterators.asList(result);
@@ -293,13 +293,13 @@ public class ExpandPathTest {
 
     @Test
     public void testFilterStartNodeFalseDoesNotFilterStartNodeWhenBelowMinLevel() throws Throwable {
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Person', minLevel:1, maxLevel:2, filterStartNode:false}) yield path return count(*) as c";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Person', minLevel:1, maxLevel:2, filterStartNode:false},datetime()) yield path return count(*) as c";
         TestUtil.testCall(db, query, (row) -> assertEquals(8L, row.get("c")));
     }
 
     @Test
     public void testOptionalExpandConfigWithNoResultsYieldsNull() {
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Agent', minLevel:1, maxLevel:2, filterStartNode:false, optional:true}) YIELD path RETURN path";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Agent', minLevel:1, maxLevel:2, filterStartNode:false, optional:true}, datetime()) YIELD path RETURN path";
         TestUtil.testResult(db, query, (result) -> {
             assertTrue(result.hasNext());
             Map<String, Object> row = result.next();
@@ -310,7 +310,7 @@ public class ExpandPathTest {
     @Test
     public void testFilterStartNodeDefaultsToFalse() throws Throwable {
         // was default true prior to 3.2.x
-        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Person'}) yield path return count(*) as c";
+        String query = "MATCH (m:Movie {title: 'The Matrix'}) CALL apoc.path.expandConfig(m,{labelFilter:'+Person'},datetime()) yield path return count(*) as c";
         TestUtil.testCall(db, query, (row) -> assertEquals(9L, row.get("c")));
     }
 
@@ -320,7 +320,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western:Eastwood', uniqueness: 'NODE_GLOBAL'}) yield node " +
+                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'/Western:Eastwood', uniqueness: 'NODE_GLOBAL'}, datetime()) yield node " +
                         "return node",
                 result -> {
 
@@ -337,7 +337,7 @@ public class ExpandPathTest {
 
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western|-Western:Blacklist', uniqueness: 'NODE_GLOBAL'}) yield node " +
+                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'ACTED_IN|PRODUCED|DIRECTED', labelFilter:'>Western|-Western:Blacklist', uniqueness: 'NODE_GLOBAL'}, datetime()) yield node " +
                         "return node",
                 result -> {
 
@@ -352,7 +352,7 @@ public class ExpandPathTest {
     public void testRelationshipFilterWorksWithoutTypeOutgoing() {
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'>', labelFilter:'>Movie', uniqueness: 'NODE_GLOBAL'}) yield node " +
+                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'>', labelFilter:'>Movie', uniqueness: 'NODE_GLOBAL'}, datetime()) yield node " +
                         "return collect(node.title) as titles",
                 result -> {
 
@@ -369,7 +369,7 @@ public class ExpandPathTest {
     public void testRelationshipFilterWorksWithoutTypeIncoming() {
         TestUtil.testResult(db,
                 "MATCH (k:Person {name:'Keanu Reeves'}) " +
-                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'<', labelFilter:'>BigBrother', uniqueness: 'NODE_GLOBAL'}) yield node " +
+                        "CALL apoc.path.subgraphNodes(k, {relationshipFilter:'<', labelFilter:'>BigBrother', uniqueness: 'NODE_GLOBAL'}, datetime()) yield node " +
                         "return node",
                 result -> {
 

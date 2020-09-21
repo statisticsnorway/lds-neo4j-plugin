@@ -64,7 +64,7 @@ public class LabelSequenceEvaluator implements Evaluator {
 
     @Override
     public Evaluation evaluate(Path path) {
-        int depth = path.length();
+        int depth = TBVEvaluators.computePathLength(path);
         Node node = path.endNode();
         boolean belowMinLevel = depth < minLevel;
 
@@ -77,6 +77,7 @@ public class LabelSequenceEvaluator implements Evaluator {
         // the user may want the sequence to begin at the start node (default), or the sequence may only apply from the next node on
         LabelMatcherGroup matcherGroup = sequenceMatchers.get((beginSequenceAtStart ? depth : depth - 1) % sequenceMatchers.size());
 
-        return matcherGroup.evaluate(node, belowMinLevel);
+        Evaluation evaluation = matcherGroup.evaluate(node, belowMinLevel);
+        return evaluation;
     }
 }

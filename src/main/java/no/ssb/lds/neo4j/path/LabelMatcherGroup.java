@@ -65,6 +65,7 @@ public class LabelMatcherGroup {
             }
 
             matcher.addLabel(filterString);
+            matcher.addLabel(filterString + "_R");
         }
 
         return this;
