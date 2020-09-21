@@ -48,8 +48,8 @@ public class PathExplorer {
     @Context
     public Log log;
 
-    @Procedure("apoc.path.expand")
-    @Description("apoc.path.expand(startNode <id>|Node|list, 'TYPE|TYPE_OUT>|<TYPE_IN', '+YesLabel|-NoLabel', minLevel, maxLevel ) yield path - expand from start node following the given relationships from min to max-level adhering to the label filters")
+    @Procedure("lds.path.expand")
+    @Description("lds.path.expand(startNode <id>|Node|list, 'TYPE|TYPE_OUT>|<TYPE_IN', '+YesLabel|-NoLabel', minLevel, maxLevel ) yield path - expand from start node following the given relationships from min to max-level adhering to the label filters")
     public Stream<PathResult> explorePath(@Name("start") Object start
             , @Name("relationshipFilter") String pathFilter
             , @Name("labelFilter") String labelFilter
@@ -61,15 +61,15 @@ public class PathExplorer {
     }
 
     //
-    @Procedure("apoc.path.expandConfig")
-    @Description("apoc.path.expandConfig(startNode <id>|Node|list, {minLevel,maxLevel,uniqueness,relationshipFilter,labelFilter,uniqueness:'RELATIONSHIP_PATH',bfs:true, filterStartNode:false, limit:-1, optional:false, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield path - " +
+    @Procedure("lds.path.expandConfig")
+    @Description("lds.path.expandConfig(startNode <id>|Node|list, {minLevel,maxLevel,uniqueness,relationshipFilter,labelFilter,uniqueness:'RELATIONSHIP_PATH',bfs:true, filterStartNode:false, limit:-1, optional:false, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield path - " +
             "expand from start node following the given relationships from min to max-level adhering to the label filters. ")
     public Stream<PathResult> expandConfig(@Name("start") Object start, @Name("config") Map<String, Object> config, @Name("snapshot") ZonedDateTime snapshot) throws Exception {
         return expandConfigPrivate(start, config).map(PathResult::new);
     }
 
-    @Procedure("apoc.path.subgraphNodes")
-    @Description("apoc.path.subgraphNodes(startNode <id>|Node|list, {maxLevel,relationshipFilter,labelFilter,bfs:true, filterStartNode:false, limit:-1, optional:false, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield node - expand the subgraph nodes reachable from start node following relationships to max-level adhering to the label filters")
+    @Procedure("lds.path.subgraphNodes")
+    @Description("lds.path.subgraphNodes(startNode <id>|Node|list, {maxLevel,relationshipFilter,labelFilter,bfs:true, filterStartNode:false, limit:-1, optional:false, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield node - expand the subgraph nodes reachable from start node following relationships to max-level adhering to the label filters")
     public Stream<NodeResult> subgraphNodes(@Name("start") Object start, @Name("config") Map<String, Object> config, @Name("snapshot") ZonedDateTime snapshot) throws Exception {
         Map<String, Object> configMap = new HashMap<>(config);
         configMap.put("uniqueness", "NODE_GLOBAL");
@@ -81,8 +81,8 @@ public class PathExplorer {
         return expandConfigPrivate(start, configMap).map(path -> path == null ? new NodeResult(null) : new NodeResult(path.endNode()));
     }
 
-    @Procedure("apoc.path.subgraphAll")
-    @Description("apoc.path.subgraphAll(startNode <id>|Node|list, {maxLevel,relationshipFilter,labelFilter,bfs:true, filterStartNode:false, limit:-1, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield nodes, relationships - expand the subgraph reachable from start node following relationships to max-level adhering to the label filters, and also return all relationships within the subgraph")
+    @Procedure("lds.path.subgraphAll")
+    @Description("lds.path.subgraphAll(startNode <id>|Node|list, {maxLevel,relationshipFilter,labelFilter,bfs:true, filterStartNode:false, limit:-1, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield nodes, relationships - expand the subgraph reachable from start node following relationships to max-level adhering to the label filters, and also return all relationships within the subgraph")
     public Stream<GraphResult> subgraphAll(@Name("start") Object start, @Name("config") Map<String, Object> config, @Name("snapshot") ZonedDateTime snapshot) throws Exception {
         Map<String, Object> configMap = new HashMap<>(config);
         configMap.remove("optional"); // not needed, will return empty collections anyway if no results
@@ -98,8 +98,8 @@ public class PathExplorer {
         return Stream.of(new GraphResult(subgraphNodes, subgraphRels));
     }
 
-    @Procedure("apoc.path.spanningTree")
-    @Description("apoc.path.spanningTree(startNode <id>|Node|list, {maxLevel,relationshipFilter,labelFilter,bfs:true, filterStartNode:false, limit:-1, optional:false, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield path - expand a spanning tree reachable from start node following relationships to max-level adhering to the label filters")
+    @Procedure("lds.path.spanningTree")
+    @Description("lds.path.spanningTree(startNode <id>|Node|list, {maxLevel,relationshipFilter,labelFilter,bfs:true, filterStartNode:false, limit:-1, optional:false, endNodes:[], terminatorNodes:[], sequence, beginSequenceAtStart:true}) yield path - expand a spanning tree reachable from start node following relationships to max-level adhering to the label filters")
     public Stream<PathResult> spanningTree(@Name("start") Object start, @Name("config") Map<String, Object> config, @Name("snapshot") ZonedDateTime snapshot) throws Exception {
         Map<String, Object> configMap = new HashMap<>(config);
         configMap.put("uniqueness", "NODE_GLOBAL");
