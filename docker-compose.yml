@@ -2,8 +2,9 @@ version: '3.7'
 
 services:
 
-  neo4jtbv:
-    image: "statisticsnorway/neo4j:4.1.1"
+  neo4j:
+    image: "statisticsnorway/neo4j:4.1.1-lds"
+    build: .
     ports:
     - "7474:7474"
     - "7473:7473"
